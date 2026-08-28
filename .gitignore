@@ -1,6 +1,9 @@
 # pi agent 本地配置
 .pi/
 
+# 简历等含个人隐私的文件不上传
+docs/简历/
+
 # 系统文件
 .DS_Store
 Thumbs.db
