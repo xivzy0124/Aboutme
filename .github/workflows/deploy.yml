@@ -1,0 +1,14 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: self-hosted
+
+    steps:
+      - name: Test Runner
+        run: echo "Hello from Aboutme Runner!"
