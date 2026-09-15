@@ -6,9 +6,12 @@ on:
       - main
 
 jobs:
-  test:
+  deploy:
     runs-on: self-hosted
 
     steps:
-      - name: Test Runner
-        run: echo "Hello from Aboutme Runner!"
+      - name: Deploy
+        run: |
+          cd /opt/Aboutme
+          git pull
+          docker compose up -d --build
