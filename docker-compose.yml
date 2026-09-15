@@ -5,4 +5,4 @@ services:
     build:
       context: ./nextjs
     ports:
-      - "3000:3000"
+      - "3005:3000"
