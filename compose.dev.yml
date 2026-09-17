@@ -1,0 +1,73 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: aboutme-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+    command: pnpm dev
+    depends_on:
+      - backend
+    networks:
+      - aboutme
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aboutme-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://aboutme:aboutme@postgres:5432/aboutme
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - aboutme
+
+  postgres:
+    image: postgres:18
+    container_name: aboutme-postgres
+    environment:
+      POSTGRES_DB: aboutme
+      POSTGRES_USER: aboutme
+      POSTGRES_PASSWORD: aboutme
+    volumes:
+      - ./sqldata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - aboutme
+
+  minio:
+    image: minio/minio:latest
+    container_name: aboutme-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - ./miniodata:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - aboutme
+
+networks:
+  aboutme:
+    driver: bridge

@@ -3,6 +3,6 @@ name: aboutme cicd
 services:
   nextjs:
     build:
-      context: ./nextjs
+      context: ./frontend
     ports:
       - "3005:3000"
