@@ -13,31 +13,9 @@ services:
     environment:
       NODE_ENV: development
     command: pnpm dev
-    depends_on:
-      - backend
     networks:
       - aboutme
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: aboutme-backend
-    working_dir: /app
-    volumes:
-      - ./backend:/app
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://aboutme:aboutme@postgres:5432/aboutme
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    depends_on:
-      - postgres
-      - minio
-    networks:
-      - aboutme
 
   postgres:
     image: postgres:18
@@ -47,14 +25,14 @@ services:
       POSTGRES_USER: aboutme
       POSTGRES_PASSWORD: aboutme
     volumes:
-      - ./sqldata:/var/lib/postgresql/data
+      - ./sqldata:/var/lib/postgresql
     ports:
       - "5432:5432"
     networks:
       - aboutme
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: aboutme-minio
     command: server /data --console-address ":9001"
     environment:

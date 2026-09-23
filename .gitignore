@@ -1,9 +1,62 @@
-# pi agent 本地配置
-.pi/
-
-# 简历等含个人隐私的文件不上传
+# ===== 含个人隐私的文件不上传 =====
 docs/简历/
 
-# 系统文件
+# ===== Docker 容器持久化数据（运行时产物，禁止上传）=====
+sqldata/
+miniodata/
+postgres-data/
+minio-data/
+*.pid
+
+# ===== 环境变量与密钥 =====
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+*.p12
+
+# ===== Node / 前端构建产物 =====
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.pnpm-store/
+.yarn/cache
+
+# ===== 依赖锁定文件按需保留（pnpm-lock.yaml 已纳入版本控制，不忽略）=====
+# 此处仅排除缓存类目录
+
+# ===== 日志与临时文件 =====
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+tmp/
+temp/
+
+# ===== IDE / 编辑器 =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ===== 操作系统文件 =====
 .DS_Store
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+
+# ===== 其它本地缓存 =====
+.cache/
+*.local
