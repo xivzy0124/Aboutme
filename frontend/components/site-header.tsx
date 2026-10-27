@@ -104,7 +104,7 @@ export function SiteHeader() {
   }, [expanded]);
 
   return (
-    <header className="sticky top-0 z-50 px-3 pt-3 pb-1.5 sm:px-4">
+    <header className="sticky top-0 z-50 px-2 pt-3 pb-1.5 sm:px-4">
       <div
         onPointerMove={handleSheen}
         className="glass-bar nav-shell relative mx-auto flex h-14 w-full max-w-4xl items-center justify-between gap-2 rounded-[1.75rem] pr-2 pl-2"
@@ -159,8 +159,12 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <div className="relative z-10 flex items-center gap-1.5">
-          <nav ref={navRef} aria-label="主导航" className="nav-rail relative flex items-center rounded-full p-1">
+        <div className="relative z-10 flex items-center gap-1.5 max-[413px]:gap-1">
+          <nav
+            ref={navRef}
+            aria-label="主导航"
+            className="nav-rail relative flex items-center rounded-full p-1 max-[413px]:p-0.5"
+          >
             <span
               aria-hidden
               className="nav-pill"
@@ -175,8 +179,8 @@ export function SiteHeader() {
                   data-active={active || undefined}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative z-10 inline-flex h-10 items-center justify-center rounded-full px-2 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:px-3.5 sm:text-ui",
-                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                    "relative z-10 inline-flex h-10 items-center justify-center rounded-full px-2 text-[0.8125rem] font-medium whitespace-nowrap transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:px-3.5 sm:text-ui max-[413px]:px-1.5 max-[413px]:text-xs",
+                    active ? "text-foreground" : "text-foreground/70 hover:text-foreground",
                   )}
                 >
                   {item.label}
