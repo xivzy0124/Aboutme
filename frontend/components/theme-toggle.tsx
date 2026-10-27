@@ -45,15 +45,13 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
+      /* 视觉尺寸保持 32px，用伪元素把可点击区域扩展到 44px */
+      className="relative after:absolute after:-inset-1.5 after:content-['']"
       aria-label={theme === "dark" ? "切换到亮色模式" : "切换到暗色模式"}
       title={theme === "dark" ? "切换到亮色模式" : "切换到暗色模式"}
       onClick={() => applyTheme(theme === "dark" ? "light" : "dark")}
     >
-      {theme === "dark" ? (
-        <Sun className="size-4" />
-      ) : (
-        <Moon className="size-4" />
-      )}
+      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </Button>
   );
 }

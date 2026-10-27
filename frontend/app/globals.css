@@ -7,8 +7,18 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  /*
+   * 字体栈：Geist 只覆盖拉丁字符，中文字形回退到系统中文字体。
+   * 之前这里的 --font-sans 指向了自身（循环引用），会导致 font-family 声明失效、
+   * 浏览器退回默认衬线字体，因此显式补全 Latin + CJK 回退链。
+   */
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC",
+    "WenQuanYi Micro Hei", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -46,6 +56,74 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * 排版系统
+ * 1) 字号全部使用 clamp() 做流体缩放，320px–1440px 之间连续过渡，避免断点处跳变；
+ * 2) 中文是方块字、字符密度高，正文行高开到 1.8，标题收紧到 1.15–1.45；
+ * 3) 每个字体令牌自带行高、字距与字重，避免各组件各写一套导致节奏散乱。
+ */
+@theme {
+  --text-kicker: 0.75rem;
+  --text-kicker--line-height: 1.5;
+  --text-kicker--letter-spacing: 0.16em;
+  --text-kicker--font-weight: 600;
+
+  --text-meta: clamp(0.8125rem, 0.79rem + 0.12vw, 0.875rem);
+  --text-meta--line-height: 1.6;
+  --text-meta--letter-spacing: 0.01em;
+
+  --text-ui: clamp(0.875rem, 0.86rem + 0.06vw, 0.9375rem);
+  --text-ui--line-height: 1.5;
+  --text-ui--letter-spacing: 0.01em;
+
+  --text-copy: clamp(0.9375rem, 0.92rem + 0.1vw, 1rem);
+  --text-copy--line-height: 1.8;
+  --text-copy--letter-spacing: 0.01em;
+
+  --text-body: clamp(1rem, 0.965rem + 0.18vw, 1.0625rem);
+  --text-body--line-height: 1.8;
+  --text-body--letter-spacing: 0.01em;
+
+  --text-lede: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
+  --text-lede--line-height: 1.75;
+  --text-lede--letter-spacing: 0.005em;
+
+  --text-card-title: clamp(1rem, 0.975rem + 0.14vw, 1.0625rem);
+  --text-card-title--line-height: 1.5;
+  --text-card-title--font-weight: 600;
+
+  --text-title: clamp(1.25rem, 1.16rem + 0.42vw, 1.4375rem);
+  --text-title--line-height: 1.45;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 600;
+
+  --text-display: clamp(2rem, 1.42rem + 2.9vw, 2.875rem);
+  --text-display--line-height: 1.16;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 600;
+
+  --text-stat: clamp(1.5rem, 1.32rem + 0.9vw, 1.875rem);
+  --text-stat--line-height: 1.1;
+  --text-stat--letter-spacing: -0.02em;
+  --text-stat--font-weight: 600;
+}
+
+/* 动效令牌：全站统一一条缓动曲线，动效只跑 opacity / transform，不触发布局重排。 */
+@theme {
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 0.625rem, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
 }
 
 :root {
@@ -119,16 +197,264 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    /* outline-ring 用实色而不是半透明，保证键盘焦点环在白底上也有足够对比度 */
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;
+    /* 中文字形在小字号下容易发虚，交给系统做灰度平滑即可，不要额外加粗 */
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
     color-scheme: light;
+    /* 防止 iOS 横屏时自动放大字号，破坏字号阶梯 */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
   html.dark {
     color-scheme: dark;
   }
+  /* 锚点跳转时避开吸顶导航 */
+  :target {
+    scroll-margin-top: 5rem;
+  }
+  /* 标题在部分浏览器支持 text-wrap: balance，属于渐进增强 */
+  :where(h1, h2, h3) {
+    text-wrap: balance;
+  }
+  :where(p, li) {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+    color: var(--foreground);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/*
+ * 滚动进入动效：使用 CSS 滚动驱动动画（animation-timeline: view()），零 JS、零主线程开销。
+ * 仅在浏览器支持且用户未开启「减弱动态效果」时生效；不支持的浏览器（如 Safari 16/17）
+ * 保持内容直接可见，因此不会出现内容缺失或布局偏移。
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: rise linear both;
+      animation-duration: auto;
+      animation-timeline: view();
+      /* 元素完全进入视口时动画已经结束，避免首屏内容停在半透明状态 */
+      animation-range: entry 0% entry 70%;
+    }
+  }
+}
+
+/* 打印时禁用进入动效，避免未滚动到的区块以透明状态被打印出来 */
+@media print {
+  .reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/*
+ * 个人介绍页装饰元素
+ * 用纯渐变绘制光晕，避免大尺寸元素叠 filter: blur()，移动端绘制成本更低。
+ */
+.about-aura {
+  background-image: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--primary) 12%, transparent),
+    transparent 100%
+  );
+}
+
+/* --------------------------------------------------------------------------
+ * 导航栏：iOS Liquid Glass
+ * 玻璃材质 = 半透明底色 + 背景模糊与饱和度提升 + 上缘镜面高光 + 柔和投影；
+ * 灵动感来自三处细节：指针跟随的折射光斑、可滑动的分段高亮、会展开的灵动岛。
+ * -------------------------------------------------------------------------- */
+.glass-bar {
+  background-color: color-mix(in oklab, var(--background) 60%, transparent);
+  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, white 74%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, white 22%, transparent),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 20px 44px -30px rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+}
+
+.dark .glass-bar {
+  background-color: color-mix(in oklab, var(--background) 55%, transparent);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 24px 48px -32px rgba(0, 0, 0, 0.9);
+}
+
+/* 玻璃上缘的一线镜面高光，模拟光线在玻璃边缘的折射 */
+.glass-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0 1.5rem auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  pointer-events: none;
+}
+
+.dark .glass-bar::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+/* 折射光斑：--mx / --my 由指针事件写入，指针离开后保持最后的落点 */
+.nav-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    180px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in oklab, var(--primary) 22%, transparent),
+    transparent 72%
+  );
+  transition: opacity 500ms var(--ease-soft);
+}
+
+@media (hover: hover) {
+  .nav-shell:hover .nav-sheen {
+    opacity: 0.55;
+  }
+}
+
+/* 分段控件轨道：凹陷的内阴影，把导航衬出「嵌进玻璃」的层次 */
+.nav-rail {
+  background-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  box-shadow: inset 0 1px 3px color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.dark .nav-rail {
+  background-color: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* 当前页高亮胶囊：切换路由时用 iOS 的减速曲线滑到新位置 */
+.nav-pill {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  border-radius: 9999px;
+  background-color: var(--background);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.16),
+    0 8px 18px -12px rgba(15, 23, 42, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    left 480ms var(--ease-soft),
+    width 480ms var(--ease-soft),
+    opacity 220ms linear;
+  will-change: left, width;
+}
+
+.dark .nav-pill {
+  background-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 8px 18px -12px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* 灵动岛：始终是深色胶囊，与玻璃底色形成对比，像 iPhone 顶部的岛 */
+.island {
+  background-image: linear-gradient(
+    160deg,
+    oklch(0.26 0.01 260) 0%,
+    oklch(0.13 0 0) 58%,
+    oklch(0.09 0 0) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+    0 10px 22px -14px rgba(0, 0, 0, 0.7);
+}
+
+.dark .island {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 12px 26px -16px rgba(0, 0, 0, 0.95);
+}
+
+.island-orb {
+  background-image: linear-gradient(
+    150deg,
+    var(--primary) 0%,
+    color-mix(in oklab, var(--primary) 62%, oklch(0.7 0.19 320)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 4px 10px -6px color-mix(in oklab, var(--primary) 75%, transparent);
+}
+
+/* 岛内的工作状态指示灯：绿色呼吸圈，暗示「可接洽」 */
+.island-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: oklch(0.77 0.18 152);
+  animation: island-pulse 2.6s ease-out infinite;
+}
+
+@keyframes island-pulse {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.77 0.18 152 / 0.55);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px oklch(0.77 0.18 152 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-pill {
+    transition: none !important;
+  }
+  .nav-sheen {
+    display: none;
+  }
+  .island-dot {
+    animation: none;
+    box-shadow: none;
+  }
+}
+
+/* 细滚动条：用于面板内部滚动，避免默认滚动条破坏卡片观感 */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }

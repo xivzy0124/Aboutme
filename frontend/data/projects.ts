@@ -15,7 +15,7 @@ export const projects: Project[] = [
     slug: "posture-gait-analysis",
     title: "智能体态分析与步态矫正系统",
     role: "全栈开发 · 独立承担核心模块",
-    period: "2026.03 - 至今",
+    period: "2026.03 - 2026.05",
     description:
       "软硬件融合项目：通过足底压力传感器采集数据，经蓝牙传输至鸿蒙设备；结合摄像头计算机视觉获取人体骨骼姿态信息，后端统一接收并入库，通过 AI 工作流分析生成体态问题报告与个性化矫正方案。",
     highlights: [
@@ -49,6 +49,32 @@ export const projects: Project[] = [
       "Ollama",
       "Xterm.js",
       "SSE",
+    ],
+    repoUrl: "https://github.com/xivzy0124/",
+  },
+  {
+    slug: "cicd-container-deploy",
+    title: "CI/CD 容器化自动部署系统",
+    role: "运维开发",
+    period: "2026.07 - 2026.08",
+    description:
+      "基于 GitHub Actions 搭建 CI/CD 自动化部署流水线，代码提交后自动触发构建、测试与部署；生产环境通过拉取私有仓库指定版本镜像并用 Docker Compose 更新容器，实现构建与运行环境解耦及版本快速切换。",
+    highlights: [
+      "流水线搭建：使用 GitHub Actions 串联构建、测试与部署流程，替代生产环境的人工部署操作。",
+      "自托管执行：使用 GitHub Self-hosted Runner 执行服务器侧任务，完成代码拉取、Docker 镜像构建与容器部署。",
+      "镜像交付：将构建产物推送至私有容器镜像仓库，以镜像版本进行应用交付，实现构建环境与生产运行环境解耦，避免在生产服务器直接构建镜像。",
+      "生产更新：生产环境拉取指定版本镜像并结合 Docker Compose 更新容器，实现版本快速切换，统一管理服务编排与配置。",
+      "统一入口：使用 Nginx 配置反向代理及 HTTPS，为容器化应用提供统一访问入口。",
+      "流程梳理：打通 Git → GitHub Actions → Docker Build → 私有镜像仓库 → Docker Compose → Nginx 的标准化持续交付链路。",
+    ],
+    tags: [
+      "GitHub Actions",
+      "Self-hosted Runner",
+      "Docker",
+      "Docker Compose",
+      "Nginx",
+      "Linux",
+      "私有镜像仓库",
     ],
     repoUrl: "https://github.com/xivzy0124/",
   },

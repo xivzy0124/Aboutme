@@ -60,3 +60,8 @@ ehthumbs.db
 # ===== 其它本地缓存 =====
 .cache/
 *.local
+__pycache__/
+*.pyc
+
+# ===== 本地页面验证脚本与截图（不参与版本控制） =====
+.verify/
