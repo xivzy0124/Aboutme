@@ -29,10 +29,10 @@ export type TrendingResponse = {
 };
 
 /**
- * 后端地址：默认指向本机 8000 端口（compose 已映射）。
- * 部署到其他环境时用 NEXT_PUBLIC_API_BASE_URL 覆盖。
+ * 后端地址：默认同源，由 next.config.ts 的 rewrite 转发到后端。
+ * 部署到其他环境时用 NEXT_PUBLIC_API_BASE_URL 覆盖（需带 /api 前缀的完整源）。
  */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 export async function fetchTrending(period: Period, signal?: AbortSignal): Promise<TrendingResponse> {
   const response = await fetch(`${API_BASE}/api/github/trending/${period}`, {

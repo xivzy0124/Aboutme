@@ -1,7 +1,7 @@
 /**
  * 项目数据源。
- * 接口由 backend/api/projects.py 提供：GET /api/projects、POST /api/projects。
- * 页面只依赖这里的类型与函数，后端迁移数据库时无需改动。
+ * 接口由 backend/api/projects.py 与 api/admin.py 提供；浏览器统一走同源 /api，
+ * 由 next.config.ts 的 rewrite 转发到后端，因此 Cookie 无需跨站处理。
  */
 
 export type Project = {
@@ -44,7 +44,8 @@ type ProjectDto = {
   created_at: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+/** 同源前缀；开发与生产都通过 Next 反代到后端的 /api。 */
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 const FIELD_LABELS: Record<string, string> = {
   title: "项目名称",
@@ -61,6 +62,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly fieldErrors: Record<string, string> = {},
+    readonly status = 0,
   ) {
     super(message);
     this.name = "ApiError";
@@ -98,16 +100,7 @@ export async function createProject(input: ProjectInput): Promise<Project> {
   const response = await fetch(`${API_BASE}/api/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      title: input.title,
-      role: input.role,
-      period: input.period,
-      description: input.description,
-      tags: input.tags,
-      highlights: input.highlights,
-      repo_url: input.repoUrl ?? null,
-      url: input.url ?? null,
-    }),
+    body: JSON.stringify(toPayload(input)),
   });
 
   if (!response.ok) {
@@ -117,13 +110,53 @@ export async function createProject(input: ProjectInput): Promise<Project> {
   return mapProject((await response.json()) as ProjectDto);
 }
 
+/** 后台编辑：slug 保持不变，覆盖其余字段。 */
+export async function updateProject(slug: string, input: ProjectInput): Promise<Project> {
+  const response = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(slug)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(toPayload(input)),
+  });
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  return mapProject((await response.json()) as ProjectDto);
+}
+
+/** 后台删除：成功返回 204，无响应体。 */
+export async function deleteProject(slug: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(slug)}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+}
+
+/** 前端 camelCase → 后端 snake_case 请求体。 */
+function toPayload(input: ProjectInput) {
+  return {
+    title: input.title,
+    role: input.role,
+    period: input.period,
+    description: input.description,
+    tags: input.tags,
+    highlights: input.highlights,
+    repo_url: input.repoUrl ?? null,
+    url: input.url ?? null,
+  };
+}
+
 /** 把 FastAPI 的 detail 转换成可展示的错误与字段级提示。 */
 async function toApiError(response: Response): Promise<ApiError> {
   try {
     const body = (await response.json()) as { detail?: unknown };
 
     if (typeof body.detail === "string") {
-      return new ApiError(body.detail);
+      return new ApiError(body.detail, {}, response.status);
     }
 
     if (Array.isArray(body.detail)) {
@@ -135,11 +168,11 @@ async function toApiError(response: Response): Promise<ApiError> {
         if (!field) continue;
         fieldErrors[field] = `${FIELD_LABELS[field] ?? "表单"}不符合要求`;
       }
-      return new ApiError("提交内容未通过校验，请检查标出的字段。", fieldErrors);
+      return new ApiError("提交内容未通过校验，请检查标出的字段。", fieldErrors, response.status);
     }
   } catch {
     // 非 JSON 响应，走下面的兜底提示
   }
 
-  return new ApiError(`请求失败（HTTP ${response.status}）`);
+  return new ApiError(`请求失败（HTTP ${response.status}）`, {}, response.status);
 }

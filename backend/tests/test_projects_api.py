@@ -1,4 +1,4 @@
-"""项目接口基础功能测试：覆盖列表、新增、校验、详情与持久化。
+"""项目接口基础功能测试：覆盖列表、鉴权、新增、校验、详情与持久化。
 
 运行方式（backend 目录）：
     pip install -r requirements-dev.txt
@@ -9,6 +9,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+
+ADMIN_CREDENTIALS = {"username": "xivzy", "password": "9500772"}
 
 VALID_PAYLOAD = {
     "title": "测试项目 Alpha",
@@ -29,6 +31,14 @@ def client(tmp_path, monkeypatch):
         yield test_client
 
 
+@pytest.fixture()
+def admin_client(client: TestClient):
+    """已登录的管理员客户端；写操作统一走这里。"""
+    login = client.post("/api/auth/login", json=ADMIN_CREDENTIALS)
+    assert login.status_code == 200
+    return client
+
+
 def test_list_returns_seed_projects(client: TestClient) -> None:
     response = client.get("/api/projects")
 
@@ -39,8 +49,16 @@ def test_list_returns_seed_projects(client: TestClient) -> None:
     assert body["items"][0]["slug"] == "posture-gait-analysis"
 
 
-def test_create_project_and_read_back(client: TestClient) -> None:
-    created = client.post("/api/projects", json=VALID_PAYLOAD)
+def test_create_requires_admin_session(client: TestClient) -> None:
+    """未登录时写操作应被拦截，避免匿名用户改动内容。"""
+    response = client.post("/api/projects", json=VALID_PAYLOAD)
+
+    assert response.status_code == 401
+    assert client.get("/api/projects").json()["total"] == 3
+
+
+def test_create_project_and_read_back(admin_client: TestClient) -> None:
+    created = admin_client.post("/api/projects", json=VALID_PAYLOAD)
 
     assert created.status_code == 201
     project = created.json()
@@ -48,26 +66,43 @@ def test_create_project_and_read_back(client: TestClient) -> None:
     assert project["tags"] == VALID_PAYLOAD["tags"]
     assert project["slug"]
 
-    listing = client.get("/api/projects").json()
+    listing = admin_client.get("/api/projects").json()
     assert listing["total"] == 4
     # 新数据按创建时间倒序排在最前
     assert listing["items"][0]["slug"] == project["slug"]
 
-    detail = client.get(f"/api/projects/{project['slug']}")
+    detail = admin_client.get(f"/api/projects/{project['slug']}")
     assert detail.status_code == 200
     assert detail.json()["id"] == project["id"]
 
 
-def test_create_rejects_invalid_payload(client: TestClient) -> None:
-    invalid_title = client.post("/api/projects", json={**VALID_PAYLOAD, "title": "A"})
+def test_admin_can_update_and_delete_project(admin_client: TestClient) -> None:
+    created = admin_client.post("/api/projects", json=VALID_PAYLOAD).json()
+    slug = created["slug"]
+
+    updated = admin_client.put(
+        f"/api/admin/projects/{slug}",
+        json={**VALID_PAYLOAD, "title": "测试项目 Beta", "tags": ["FastAPI"]},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "测试项目 Beta"
+    assert updated.json()["slug"] == slug
+
+    deleted = admin_client.delete(f"/api/admin/projects/{slug}")
+    assert deleted.status_code == 204
+    assert admin_client.get(f"/api/projects/{slug}").status_code == 404
+
+
+def test_create_rejects_invalid_payload(admin_client: TestClient) -> None:
+    invalid_title = admin_client.post("/api/projects", json={**VALID_PAYLOAD, "title": "A"})
     assert invalid_title.status_code == 422
 
-    invalid_period = client.post(
+    invalid_period = admin_client.post(
         "/api/projects", json={**VALID_PAYLOAD, "period": "2026-10 2026-11"}
     )
     assert invalid_period.status_code == 422
 
-    empty_tags = client.post("/api/projects", json={**VALID_PAYLOAD, "tags": ["  "]})
+    empty_tags = admin_client.post("/api/projects", json={**VALID_PAYLOAD, "tags": ["  "]})
     assert empty_tags.status_code == 422
 
 
@@ -82,6 +117,7 @@ def test_data_survives_app_restart(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("SQLITE_PATH", str(tmp_path / "persist-test.db"))
 
     with TestClient(app) as first:
+        first.post("/api/auth/login", json=ADMIN_CREDENTIALS)
         created = first.post("/api/projects", json=VALID_PAYLOAD).json()
 
     with TestClient(app) as second:

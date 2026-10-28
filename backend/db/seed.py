@@ -1,13 +1,13 @@
-"""首次启动时写入的示例项目。
+"""首次启动时写入的示例数据。
 
 内容与前端静态阶段保持一致，避免接入数据库后页面突然变空；
-只在表为空时写入一次，不会覆盖用户新增的数据。
+只在对应表为空时写入一次，不会覆盖用户新增的数据。
 """
 
 from datetime import datetime, timezone
 
-from repositories import get_project_repository
-from repositories.base import ProjectDraft
+from repositories import get_post_repository, get_project_repository
+from repositories.base import PostDraft, ProjectDraft
 
 _DEFAULT_PROJECTS = (
     ProjectDraft(
@@ -99,3 +99,37 @@ def seed_default_projects() -> None:
 
     for project in _DEFAULT_PROJECTS:
         repository.create(project)
+
+
+# 示例文章正文按空行分段；标题用 "## " 开头，列表项用 "- " 开头
+_DEFAULT_POSTS = (
+    PostDraft(
+        slug="hello-world",
+        title="你好，世界",
+        summary="博客的第一篇文章：记录这个站点从静态页面走向前后端打通的过程与后续写作计划。",
+        content="""这里是关于这个个人站点的第一篇文章。它最初只是一组静态页面，用来验证排版、字号与响应式布局；现在项目与文章都已经迁入数据库，可以通过管理后台直接编辑。
+
+## 接下来会写什么
+
+主要围绕自己在做项目时真正遇到的问题：运维部署、容器化、后端接口设计，以及 AI 工具如何进入日常工作流。
+
+- 项目复盘：从需求到上线的完整链路
+- 运维笔记：部署、排障与自动化
+- AI 实践：工具与工作流的组合方式
+
+写作的原则很简单：写清楚背景、过程和结论，少一点正确的废话。""",
+        tags=["随笔"],
+        published_at="2024-01-01",
+        created_at=datetime(2024, 1, 1, 8, tzinfo=timezone.utc),
+    ),
+)
+
+
+def seed_default_posts() -> None:
+    """表为空时写入示例文章；已有数据则跳过。"""
+    repository = get_post_repository()
+    if repository.count() > 0:
+        return
+
+    for post in _DEFAULT_POSTS:
+        repository.create(post)

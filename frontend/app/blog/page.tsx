@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight, Mail, PenLine } from "lucide-react";
 
-import { posts } from "@/data/posts";
+import { fetchServerPosts } from "@/lib/server-api";
 import { site } from "@/data/site";
 import { cn } from "@/lib/utils";
 
@@ -11,12 +11,13 @@ export const metadata: Metadata = {
   description: "赵晓威的技术笔记、项目复盘与日常踩坑记录。",
 };
 
-/** 列表按发布时间倒序；日期统一换成 2026.10.27 这种更易扫读的写法。 */
-const sortedPosts = [...posts].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+/** 日期统一换成 2026.10.27 这种更易扫读的写法。 */
 const formatDate = (iso: string) => iso.replaceAll("-", ".");
 const emailUrl = site.socialLinks.find((link) => link.url.startsWith("mailto:"))?.url;
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  // 文章来自 SQLite（后端按发布时间倒序返回），管理后台改动后会即时反映
+  const sortedPosts = await fetchServerPosts();
   return (
     <div className="relative isolate">
       <div
@@ -44,6 +45,14 @@ export default function BlogPage() {
               <dd className="text-meta font-medium text-foreground">持续更新</dd>
             </div>
           </dl>
+
+          <Link
+            href="/admin/blog"
+            className="mt-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 text-meta text-foreground/80 transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <PenLine className="size-3.5" aria-hidden />
+            写文章 / 管理内容
+          </Link>
         </header>
 
         {sortedPosts.length === 0 ? (

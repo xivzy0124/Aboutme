@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import Link from "next/link";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ApiError, createProject, type Project, type ProjectInput } from "@/lib/projects-api";
+import {
+  ApiError,
+  createProject,
+  updateProject,
+  type Project,
+  type ProjectInput,
+} from "@/lib/projects-api";
 import { cn } from "@/lib/utils";
 
 /** 表单内部字段；周期拆成两个月份输入，提交时再拼成 "YYYY.MM - YYYY.MM"。 */
@@ -31,6 +38,21 @@ const EMPTY_DRAFT: Draft = {
   highlights: "",
   repoUrl: "",
 };
+
+/** 把已有项目回填到表单；周期 "2026.03 - 2026.05" 拆成 month 输入需要的格式。 */
+function toDraft(project: Project): Draft {
+  const [start = "", end = ""] = project.period.split(" - ");
+  return {
+    title: project.title,
+    role: project.role,
+    periodStart: start.replace(".", "-"),
+    periodEnd: end.replace(".", "-"),
+    description: project.description,
+    tags: project.tags.join(", "),
+    highlights: project.highlights.join("\n"),
+    repoUrl: project.repoUrl ?? "",
+  };
+}
 
 /** 与后端 schemas/project.py 的约束保持一致，避免提交后才看到错误。 */
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
@@ -171,18 +193,23 @@ function Field({
 export function ProjectFormDialog({
   open,
   onClose,
-  onCreated,
+  onSaved,
+  initial,
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (project: Project) => void;
+  onSaved: (project: Project) => void;
+  /** 传入则为编辑模式：回填字段并调用 PUT 接口。 */
+  initial?: Project;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [draft, setDraft] = useState<Draft>(() => (initial ? toDraft(initial) : EMPTY_DRAFT));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState("");
+  const [authRequired, setAuthRequired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const titleId = useId();
+  const editing = Boolean(initial);
 
   // open 由父组件控制：true 走 showModal（自带焦点陷阱与 Esc 处理），false 关闭。
   // 表单初始值由父组件通过 key 重新挂载来重置，这里只负责同步原生 dialog 的开关。
@@ -232,13 +259,22 @@ export function ProjectFormDialog({
 
     setErrors({});
     setServerError("");
+    setAuthRequired(false);
     setSubmitting(true);
 
     try {
-      const project = await createProject(input);
-      onCreated(project);
+      const project = initial
+        ? await updateProject(initial.slug, input)
+        : await createProject(input);
+      onSaved(project);
     } catch (reason) {
       if (reason instanceof ApiError) {
+        if (reason.status === 401) {
+          // 写操作需要管理员会话：不弹字段错误，直接引导去登录
+          setAuthRequired(true);
+          setServerError("");
+          return;
+        }
         const mapped: FieldErrors = {};
         for (const [field, message] of Object.entries(reason.fieldErrors)) {
           const local = SERVER_FIELD_MAP[field];
@@ -272,12 +308,14 @@ export function ProjectFormDialog({
       <form onSubmit={handleSubmit} noValidate className="flex max-h-[calc(100dvh-2rem)] flex-col">
         <header className="flex items-start justify-between gap-4 border-b border-border px-5 pt-5 pb-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-kicker text-primary">Projects · 新增</p>
+            <p className="text-kicker text-primary">Projects · {editing ? "编辑" : "新增"}</p>
             <h2 id={titleId} className="mt-1.5 text-title">
-              新增项目
+              {editing ? "编辑项目" : "新增项目"}
             </h2>
             <p className="mt-1 text-meta text-muted-foreground">
-              提交后写入本地 SQLite，并立即出现在列表顶部。
+              {editing
+                ? "保存后立即覆盖数据库记录，公开页同步更新。"
+                : "提交后写入本地 SQLite，并立即出现在列表顶部。"}
             </p>
           </div>
           <button
@@ -417,6 +455,22 @@ export function ProjectFormDialog({
               {serverError}
             </p>
           ) : null}
+
+          {authRequired ? (
+            <p
+              role="alert"
+              className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-meta text-foreground"
+            >
+              写操作需要管理员身份，请先
+              <Link
+                href="/admin/login?next=/projects"
+                className="mx-1 font-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary"
+              >
+                登录管理后台
+              </Link>
+              后再保存。
+            </p>
+          ) : null}
         </div>
 
         <footer className="flex flex-col-reverse gap-2 border-t border-border bg-muted/30 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
@@ -431,7 +485,7 @@ export function ProjectFormDialog({
             取消
           </Button>
           <Button type="submit" size="lg" disabled={submitting} className="h-10 rounded-xl px-4">
-            {submitting ? "保存中…" : "保存项目"}
+            {submitting ? "保存中…" : editing ? "保存修改" : "保存项目"}
           </Button>
         </footer>
       </form>

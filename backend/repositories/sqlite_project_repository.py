@@ -79,6 +79,38 @@ class SqliteProjectRepository(ProjectRepository):
 
         return _row_to_record(row)
 
+    def update(self, slug: str, draft: ProjectDraft) -> ProjectRecord | None:
+        """覆盖项目内容；slug 与创建时间保持不变，用于后台编辑。"""
+        with self._database.connect() as connection:
+            connection.execute(
+                """
+                UPDATE projects
+                SET title = ?, role = ?, period = ?, description = ?,
+                    highlights = ?, tags = ?, url = ?, repo_url = ?
+                WHERE slug = ?
+                """,
+                (
+                    draft.title,
+                    draft.role,
+                    draft.period,
+                    draft.description,
+                    json.dumps(draft.highlights, ensure_ascii=False),
+                    json.dumps(draft.tags, ensure_ascii=False),
+                    draft.url,
+                    draft.repo_url,
+                    slug,
+                ),
+            )
+            row = connection.execute(
+                f"SELECT {_COLUMNS} FROM projects WHERE slug = ?", (slug,)
+            ).fetchone()
+        return _row_to_record(row) if row else None
+
+    def delete(self, slug: str) -> bool:
+        with self._database.connect() as connection:
+            cursor = connection.execute("DELETE FROM projects WHERE slug = ?", (slug,))
+        return cursor.rowcount > 0
+
     def count(self) -> int:
         with self._database.connect() as connection:
             return int(connection.execute("SELECT COUNT(*) FROM projects").fetchone()[0])

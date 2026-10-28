@@ -49,6 +49,32 @@ def create_project(payload: ProjectCreate) -> ProjectRecord:
     raise RuntimeError("生成唯一 slug 失败，请稍后重试")
 
 
+def update_project(slug: str, payload: ProjectCreate) -> ProjectRecord | None:
+    """按 slug 更新项目；slug 与创建时间保持不变，避免已分享链接失效。"""
+    repository = get_project_repository()
+    existing = repository.get_by_slug(slug)
+    if existing is None:
+        return None
+
+    draft = ProjectDraft(
+        slug=existing.slug,
+        title=payload.title,
+        role=payload.role,
+        period=payload.period,
+        description=payload.description,
+        highlights=payload.highlights,
+        tags=payload.tags,
+        created_at=existing.created_at,
+        url=str(payload.url) if payload.url else None,
+        repo_url=str(payload.repo_url) if payload.repo_url else None,
+    )
+    return repository.update(slug, draft)
+
+
+def delete_project(slug: str) -> bool:
+    return get_project_repository().delete(slug)
+
+
 def _build_slug(title: str) -> str:
     """优先复用标题中的拉丁字符；纯中文标题回退到 project-随机后缀。"""
     ascii_part = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")

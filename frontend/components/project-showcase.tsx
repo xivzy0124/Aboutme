@@ -281,7 +281,7 @@ export function ProjectShowcase() {
         key={dialogSession}
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        onCreated={handleCreated}
+        onSaved={handleCreated}
       />
     </section>
   );

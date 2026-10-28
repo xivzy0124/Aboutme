@@ -13,6 +13,8 @@ const navItems = [
   { href: "/about", label: "About" },
   { href: "/projects", label: "Projects" },
   { href: "/blog", label: "Blog" },
+  // 管理后台入口：未登录点进去会由服务端重定向到 /admin/login
+  { href: "/admin", label: "Admin" },
 ];
 
 type PillGeometry = {
@@ -132,7 +134,8 @@ export function SiteHeader() {
             {site.name.slice(0, 1)}
           </span>
           <span className="flex items-center">
-            <span className="hidden text-[0.8125rem] font-semibold tracking-tight whitespace-nowrap text-white/90 min-[360px]:inline">
+            {/* 窄屏优先保证 5 项导航完整：名字让位给头像，sm 起再显示 */}
+            <span className="hidden text-[0.8125rem] font-semibold tracking-tight whitespace-nowrap text-white/90 sm:inline">
               {site.name}
             </span>
             <span className="hidden grid-cols-[0fr] overflow-hidden transition-[grid-template-columns] duration-500 ease-soft group-hover:grid-cols-[1fr] group-focus-visible:grid-cols-[1fr] sm:grid">

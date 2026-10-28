@@ -3,8 +3,9 @@
 只负责 HTTP 协议转换：参数校验在 schema 层，业务逻辑在 service 层。
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from api.deps import require_admin, require_same_origin
 from schemas.project import ProjectCreate, ProjectListResponse, ProjectOut
 from services.projects import create_project, get_project, list_projects
 
@@ -20,7 +21,13 @@ def list_projects_endpoint() -> ProjectListResponse:
     )
 
 
-@router.post("", response_model=ProjectOut, status_code=201, summary="新增项目")
+@router.post(
+    "",
+    response_model=ProjectOut,
+    status_code=201,
+    summary="新增项目（需管理员登录）",
+    dependencies=[Depends(require_admin), Depends(require_same_origin)],
+)
 def create_project_endpoint(payload: ProjectCreate) -> ProjectOut:
     return ProjectOut.from_record(create_project(payload))
 
