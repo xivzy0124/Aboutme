@@ -6,6 +6,8 @@ sqldata/
 miniodata/
 postgres-data/
 minio-data/
+backend/data/
+*.db
 *.pid
 
 # ===== 环境变量与密钥 =====

@@ -440,6 +440,56 @@
   }
 }
 
+/* --------------------------------------------------------------------------
+ * 新增项目弹窗：原生 <dialog>
+ * 遮罩用半透明前景色 + 模糊，让底层列表退为背景；弹窗本身做一次轻微的
+ * 上浮缩放，动效只跑 opacity / transform，不触发布局重排。
+ * -------------------------------------------------------------------------- */
+.project-dialog {
+  padding: 0;
+}
+
+.project-dialog::backdrop {
+  background-color: color-mix(in oklab, var(--foreground) 40%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.project-dialog[open] {
+  animation: dialog-pop 260ms var(--ease-soft) both;
+}
+
+.project-dialog[open]::backdrop {
+  animation: backdrop-fade 260ms ease-out both;
+}
+
+@keyframes dialog-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.75rem, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-dialog[open],
+  .project-dialog[open]::backdrop {
+    animation: none;
+  }
+}
+
 /* 细滚动条：用于面板内部滚动，避免默认滚动条破坏卡片观感 */
 .scroll-thin {
   scrollbar-width: thin;
